@@ -1,0 +1,7 @@
+
+var ConstIngame = {
+    
+
+}
+
+export {ConstIngame};
