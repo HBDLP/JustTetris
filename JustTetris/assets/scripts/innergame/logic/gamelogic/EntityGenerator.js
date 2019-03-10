@@ -3,9 +3,10 @@ import {EntityType, TetrisEntity} from '../entity/TetrisEntity.js';
 
 export default class EntityGenerator
 {
-    constructor()
+    constructor(root)
     {
         this.loadTaskNum = 0;
+        this.entityRoot = root;
         this.entityElementPool = new cc.NodePool();
         this.entityElementAsset = null;
     }
@@ -18,13 +19,16 @@ export default class EntityGenerator
 
         if(object === null)
         {
+            generateType = EntityType.Type_L_L;
             entity = new TetrisEntity(generateType);
-            entity.setIns(this._borrowEntityElement());
         }
         else{
             object.reload(generateType);
             entity = object;
         }
+
+        entity.setIns(this._borrowEntityElement(4));
+        this._addEntityNodeInScene(entity);
 
         return entity;
     }
@@ -45,6 +49,16 @@ export default class EntityGenerator
 
             self._onLoadEntityElementFin(object);
         });
+    }
+
+    _addEntityNodeInScene(entity)
+    {
+        for(let i = 0; i < entity.getNodeIns().length; i++)
+        {
+            let currNode = entity.getNodeIns()[i];
+            currNode.active = true;
+            currNode.parent = this.entityRoot;
+        }
     }
 
     _onLoadEntityElementFin(object)
@@ -70,14 +84,14 @@ export default class EntityGenerator
                 ins = this.entityElementPool.get();
             }
             else{
-                ins = cc.instantiate(currPool.prefab);
+                ins = cc.instantiate(this.entityElementAsset);
                 console.warn("instantiate entity element node!!");
             }
 
             insTbl.push(ins);
         }
 
-        return ins;
+        return insTbl;
     }
 
     _restoreEntityElement(entityIns)

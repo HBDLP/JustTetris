@@ -12,15 +12,15 @@ import EntityBehaviorStrategyT from '../entitybehavior/EntityBehaviorStrategyT.j
 
 export default class InnergameLogic
 {
-    constructor()
+    constructor(game)
     {
         let bpm = 100;
         let entityWidth = 35;
 
         this.perBeatTime = 60 / bpm;
         this.currActiveEntity = null;
-        this.entityGenerator = null;
-        this.strategyLL = new EntityBehaviorStrategyLL();
+        this.entityGenerator = new EntityGenerator(game.getEntityRoot());
+        this.strategyLL = new EntityBehaviorStrategyLL(this);
         this.strategyLR = new EntityBehaviorStrategyLR();
         this.strategyZL = new EntityBehaviorStrategyZL();
         this.strategyZR = new EntityBehaviorStrategyZR();
@@ -28,6 +28,7 @@ export default class InnergameLogic
         this.strategyLong = new EntityBehaviorStrategyLong();
         this.strategyT = new EntityBehaviorStrategyT();
         this.currStrategy = null;
+        this.landedElementDataSet = [];
     }
 
     changeType()
@@ -35,46 +36,82 @@ export default class InnergameLogic
 
     }
 
+    init()
+    {
+        this.entityGenerator.loadRes();
+    }
+
+    isInitDone()
+    {
+        return this.entityGenerator.loadTaskNum === 0;
+    }
+
     startGame()
     {
         this._tryGenerateEntity(null);
     }
 
-    manualUpdate(dt)
+    finishGame()
     {
-        if(this.currActiveEntity !== null)
-        {
-            this.currActiveEntity.manualUpdate();
-        }
+        this._releaseEntityBehaviorStrategy();
+        this._releaseEntityGenerator();
     }
 
-    updateEntity()
+    manualUpdate(dt)
     {
-        let bRet = true;
+        this._tryLandActiveEntity(dt);
+    }
 
+    onEntityLanded(entity)
+    {
+
+        this._tryGenerateEntity(entity);
+    }
+
+
+    _releaseEntityBehaviorStrategy()
+    {
+        this.strategyLL.release();
+        this.strategyLL = null;
+        this.strategyLR.release();
+        this.strategyLR = null;
+        this.strategyZL.release();
+        this.strategyZL = null;
+        this.strategyZR.release();
+        this.strategyZR = null;
+        this.strategySquare.release();
+        this.strategySquare = null;
+        this.strategyLong.release();
+        this.strategyLong = null;
+        this.strategyT.release();
+        this.strategyLL = null;
+        
+        this.currStrategy = null;
+    }
+
+    _releaseEntityGenerator()
+    {
+        this.entityGenerator.release();
+        this.entityGenerator = null;
+    }
+
+    _tryLandActiveEntity(dt)
+    {
         do{
+
             if(this.currActiveEntity === null)
             {
-                bRet = false;
                 break;
             }
 
             if(this.currStrategy === null)
             {
-                bRet = false;
                 break;
             }
 
-            this.currStrategy.updateEntity(dt, this.currActiveEntity);
+            let isLand = this.currStrategy.tryLandEntity(dt);
 
         }while(false);
-
-        return bRet;
-    }
-
-    onEntityLanded(object)
-    {
-        this._tryGenerateEntity(object);
     }
 
     _tryGenerateEntity(object)
@@ -83,7 +120,8 @@ export default class InnergameLogic
         {
             this.currActiveEntity = this.entityGenerator.generateEntity(object);
             this._setStrategy(this.currActiveEntity.getType());
-            this.currStrategy.initEntity(this.currActiveEntity);
+            this.currStrategy.initEntityBehavior(this.currActiveEntity);
+            this.currStrategy.setLandingTime(this.perBeatTime);
         }
         else{
             console.error("logic error! generator is null!!");
